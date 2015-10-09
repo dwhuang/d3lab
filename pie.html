@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>bar-freq</title>
+        <script src="js/d3.min.js" charset="utf-8"></script>
+        <style media="screen">
+        </style>
+    </head>
+    <body>
+        <svg class="chart">
+        </svg>
+        <script charset="utf-8">
+var width = 960;
+var height = 500;
+var radius = 150;
+// set chart size & margins
+var chart = d3.select(".chart")
+    .attr("width", width)
+    .attr("height", height)
+  .append("g")
+    .attr("transform", "translate(" + width / 2 + ", "
+            + height / 2 + ")");
+
+var color = d3.scale.category20c();
+
+d3.tsv("data/freq.tsv", function(d) {
+    d.frequency = +d.frequency;
+    return d;
+}, function(error, data) {
+    var data2 = [0, 0, 0, 0, 0];
+    for (var i = 0; i < data.length; ++i) {
+        data2[Math.floor(i / 6)] += data[i].frequency;
+    }
+
+    var arc = d3.svg.arc()
+        .outerRadius(radius)
+        .innerRadius(radius / 2);
+    var arc2 = d3.svg.arc()
+        .outerRadius(radius * 1.5)
+        .innerRadius(radius);
+    var pie = d3.layout.pie()
+        .sort(null)
+        .value(function(d) { return d.frequency; });
+    var pie2 = d3.layout.pie()
+        .sort(null)
+        .value(function(d) { return d; });
+
+    //console.log(arc(pie(data)));
+    //console.log(d3.layout.pie()([1]));
+
+    var slices = chart.selectAll(".inner")
+        .data(pie(data))
+      .enter().append("path")
+        .attr("class", "inner")
+        .style("fill", function(d, i) { return color(i); })
+        .attr("d", arc);
+    var slices2 = chart.selectAll(".outer")
+        .data(pie2(data2))
+      .enter().append("path")
+        .attr("class", "outer")
+        .style("fill", function(d, i) { return color(i); })
+        .attr("d", arc2);
+});
+
+        </script>
+    </body>
+</html>

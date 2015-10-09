@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>bar-freq</title>
+        <script src="js/d3.min.js" charset="utf-8"></script>
+        <script src="js/topojson.min.js" charset="utf-8">
+        </script>
+        <style media="screen">
+        </style>
+    </head>
+    <body>
+        <svg class="chart">
+        </svg>
+        <script charset="utf-8">
+var width = 960;
+var height = 500;
+
+var color = d3.scale.category20c();
+
+var proj = d3.geo.orthographic()
+    .scale(height / 2)
+    //.scale(80)
+    .translate([width / 2, height / 2])
+    .clipAngle(90);
+var path = d3.geo.path()
+    .projection(proj);
+var rscale = d3.scale.linear()
+    .domain([-height, height])
+    .range([-180, 180]);
+
+var drag = d3.behavior.drag()
+    .on("drag", function(d) {
+        var r = proj.rotate();
+        proj.rotate([r[0] + rscale(d3.event.dx),
+                r[1] - rscale(d3.event.dy),
+                r[2]]);
+        //proj.rotate([r[0] + rscale(d3.event.dx), r[1], r[2]]);
+        chart.selectAll("path").attr("d", path);
+    });
+
+// set chart size & margins
+var chart = d3.select(".chart")
+    .attr("width", width)
+    .attr("height", height)
+    .call(drag);
+
+d3.json("geo/world-50m.json", function(error, data) {
+    var countries = topojson.feature(data, data.objects.countries).features;
+    chart.selectAll("path")
+        .data(countries)
+      .enter().append("path")
+        .attr("d", path)
+        .style("fill", function(d, i) { return color(i); });
+});
+
+        </script>
+    </body>
+</html>

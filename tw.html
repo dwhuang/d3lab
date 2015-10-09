@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>bar-freq</title>
+        <script src="js/d3.min.js" charset="utf-8"></script>
+        <script src="js/topojson.min.js" charset="utf-8">
+        </script>
+        <style media="screen">
+.chart {
+    display: block;
+    margin: auto;
+}
+.countyName {
+    font-size: 300%;
+    text-align: center;
+}
+        </style>
+    </head>
+    <body>
+        <svg class="chart">
+        </svg>
+        <div class="countyName"/>
+        <script charset="utf-8">
+var width = 960;
+var height = 500;
+
+var color = d3.scale.category20c();
+
+var proj = d3.geo.mercator()
+    .center([121, 24])
+    .scale(6000);
+
+var path = d3.geo.path()
+    .projection(proj);
+
+var zoom = d3.behavior.zoom()
+    .scale(1)
+    .scaleExtent([1, 20])
+    .on("zoom", function() {
+        proj.scale(6000 + 2000 * (d3.event.scale - 1));
+        chart.selectAll("path").attr("d", path);
+    });
+
+var drag = d3.behavior.drag()
+    .on("drag", function() {
+        var center = proj.invert([width / 2, height / 2]);
+        var dragCenter = proj.invert([
+            width / 2 - d3.event.dx,
+            height / 2 - d3.event.dy]);
+        proj.center(dragCenter);
+        chart.selectAll("path").attr("d", path);
+    });
+
+// set chart size & margins
+var chart = d3.select(".chart")
+    .attr("width", width)
+    .attr("height", height)
+    .call(zoom)
+    .call(drag);
+
+//d3.json("geo/twCounty2010.topo.json", function(error, data) {
+d3.json("geo/twTown1982.topo.json", function(error, data) {
+//d3.json("geo/twVillage1982.topo.json", function(error, data) {
+    var topo = topojson.feature(data, data.objects.layer1).features;
+    chart.selectAll("path")
+        .data(topo)
+      .enter().append("path")
+        .attr("d", path)
+        .style("fill", function(d, i) { return color(i); })
+        .on("mouseenter", function(d) {
+            d3.select(this).style({
+                "fill": "black"
+            });
+            //d3.select(".countyName").text(d.properties.COUNTYNAME);
+            d3.select(".countyName").html(
+                d.properties.COUNTYNAME + "<br/>" + d.properties.TOWNNAME);
+            //d3.select(".countyName").html(
+            //    d.properties.COUNTYNAME + "<br/>" + d.properties.TOWNNAME
+            //        + "<br/>" + d.properties.VILLAGENAM);
+        })
+        .on("mouseleave", function(d, i) {
+            d3.select(this).style({
+                "fill": color(i)
+            });
+            d3.select(".countyName").text("");
+        });
+});
+
+        </script>
+    </body>
+</html>

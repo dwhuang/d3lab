@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>bar-freq</title>
+        <script src="js/d3.min.js" charset="utf-8"></script>
+        <style media="screen">
+.chart .bar {
+    fill: steelblue;
+}
+.chart .bar:hover {
+    fill: brown;
+}
+.chart .cat {
+    text-anchor: middle;
+}
+.axis text {
+    font: 10px sans-serif;
+}
+.axis path, .axis line {
+    fill: none;
+    stroke: black;
+}
+.x path {
+    stroke: none;
+}
+.tooltip rect {
+    stroke: black;
+    fill: black;
+    opacity: 1;
+}
+.tooltip text {
+    stroke: none;
+    fill: white;
+    text-anchor: middle;
+    alignment-baseline: central;
+}
+        </style>
+    </head>
+    <body>
+        <svg class="chart">
+        </svg>
+        <select name="sort" id="sort" onchange="sortChange()">
+            <option value="none">none</option>
+            <option value="ascending">ascending</option>
+            <option value="descending">descending</option>
+        </select>
+
+        <script charset="utf-8">
+var width = 960;
+var height = 500;
+var margin = {top: 40, right: 30, left: 30, bottom: 40};
+// set chart size & margins
+var chart = d3.select(".chart")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + ", " + margin.top + ")");
+
+var x = d3.scale.ordinal().rangeRoundBands([0, width], .1);
+var y = d3.scale.linear().range([height, 0]);
+
+// axes
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+chart.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(xAxis);
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left")
+    .ticks(10, "%");
+chart.append("g")
+    .attr("class", "y axis")
+    .call(yAxis)
+  .append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("y", "6")
+    .attr("dy", ".75em")
+    .style("text-anchor", "end")
+    .text("Frequency");
+
+// tooltip 
+var tooltip = d3.select(".chart g").append("g")
+    .attr("class", "tooltip")
+    .style("display", "none");
+var tooltipRect = tooltip.append("rect")
+    .attr("width", 80)
+    .attr("height", 30)
+    .attr("rx", 5)
+    .attr("ry", 5);
+var tooltipText = tooltip.append("text");
+var showTooltip = function(d) {
+    var barX = d3.select(this).attr("x");
+    var barY = d3.select(this).attr("y");
+    var barW = d3.select(this).attr("width");
+    var barH = d3.select(this).attr("height");
+    var w = tooltipRect.attr("width");
+    var h = tooltipRect.attr("height");
+    var x = barX - (w - barW) / 2;
+    var y = barY - h - 5;
+    tooltip
+        .attr("transform", "translate(" + x + "," + y + ")")
+        .style("display", "block");
+    tooltipText
+        .attr("x", tooltipRect.attr("width") / 2)
+        .attr("y", tooltipRect.attr("height") / 2)
+        .text(d.letter + ": " + d3.format(".2%")(d.frequency));
+}
+var hideTooltip = function() {
+    tooltip.style("display", "none");
+}
+
+var freqData;
+
+var sort = "none";
+
+d3.tsv("data/freq.tsv", function(d) {
+    d.frequency = +d.frequency;
+    return d;
+}, function(error, data) {
+    freqData = data;
+
+    x.domain(freqData.map(function(d) { return d.letter; }));
+    chart.select(".x.axis").call(xAxis);
+    y.domain([0, d3.max(freqData, function(d) { return d.frequency; })]);
+    chart.select(".y.axis").call(yAxis);
+
+    var bars = redraw();
+
+    bars.on("mouseenter", showTooltip);
+    bars.on("mouseleave", hideTooltip);
+});
+
+function redraw() {
+    if (sort == "descending") {
+        freqData.sort(function(a, b) { return b.frequency - a.frequency; });
+    } else if (sort == "ascending") {
+        freqData.sort(function(a, b) { return a.frequency - b.frequency; });
+    } else {
+        freqData.sort(function(a, b) {
+            return a.letter.localeCompare(b.letter);
+        });
+    }
+    x.domain(freqData.map(function(d) { return d.letter; }));
+    chart.select(".x.axis")
+        .style("opacity", "0.5")
+      .transition()
+        .duration(1000)
+        .call(xAxis)
+      .transition()
+        .duration(0)
+        .style("opacity", "1");
+
+    var bars = chart.selectAll(".bar")
+        .data(freqData, function(d) { return d.letter; });
+    var barEnter = bars.enter().insert("rect", ".x.axis")
+        .attr("class", "bar")
+        .attr("width", x.rangeBand())
+        .attr("height", function(d) { return height - y(d.frequency); });
+    var barUpdate = chart.selectAll(".bar")
+        .style("opacity", "0.5")
+      .transition()
+        .duration(1000)
+        .attr("x", function(d) { return x(d.letter); })
+        .attr("y", function(d) { return y(d.frequency); })
+      .transition()
+        .duration(0)
+        .style("opacity", "1");
+
+    //var bars = chart.selectAll(".bar")
+    //    .data(freqData);
+    //var barEnter = bars.enter()
+    //  .insert("rect", ".x.axis");
+    //var barUpdate = bars.style("opacity", "0.5")
+    //  .transition()
+    //    .duration(1000)
+    //    .attr("x", function(d) { return x(d.letter); })
+    //    .attr("y", function(d) { return y(d.frequency); })
+    //    .attr("class", "bar")
+    //    .attr("width", x.rangeBand())
+    //    .attr("height", function(d) { return height - y(d.frequency); })
+    //  .transition()
+    //    .duration(0)
+    //    .style("opacity", "1");
+
+    return bars;
+}
+
+function sortChange() {
+    sort = d3.select("select#sort").property("value");
+    redraw();
+}
+        </script>
+    </body>
+</html>

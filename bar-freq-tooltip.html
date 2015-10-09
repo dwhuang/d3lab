@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>bar-freq</title>
+        <script src="js/d3.min.js" charset="utf-8"></script>
+        <style media="screen">
+.chart .bar {
+    fill: steelblue;
+}
+.chart .bar:hover {
+    fill: brown;
+}
+.chart .cat {
+    text-anchor: middle;
+}
+.axis text {
+    font: 10px sans-serif;
+}
+.axis path, .axis line {
+    fill: none;
+    stroke: black;
+}
+.x path {
+    stroke: none;
+}
+/*.y line {
+    stroke: white;
+}*/
+.tooltip rect {
+    stroke: black;
+    fill: black;
+    opacity: 0.6;
+}
+.tooltip text {
+    stroke: none;
+    fill: white;
+    text-anchor: middle;
+    alignment-baseline: central;
+}
+        </style>
+    </head>
+    <body>
+        <svg class="chart">
+        </svg>
+
+        <script charset="utf-8">
+var width = 960;
+var height = 500;
+var margin = {top: 40, right: 30, left: 30, bottom: 40};
+// set chart size & margins
+var chart = d3.select(".chart")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + ", " + margin.top + ")");
+
+var x = d3.scale.ordinal().rangeRoundBands([0, width], .1);
+var y = d3.scale.linear().range([height, 0]);
+
+chart.append("g").attr("class", "barEnd");
+
+// axes
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+chart.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + (height) + ")")
+    .call(xAxis);
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left")
+    //.innerTickSize(-width)
+    //.outerTickSize(-6)
+    .ticks(10, "%");
+chart.append("g")
+    .attr("class", "y axis")
+    .call(yAxis)
+  .append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("y", "6")
+    .attr("dy", ".75em")
+    .style("text-anchor", "end")
+    .text("Frequency");
+
+// tooltip 
+var tooltip = d3.select(".chart g").append("g")
+    .attr("class", "tooltip")
+    .style("display", "none");
+var tooltipRect = tooltip.append("rect")
+    .attr("width", 80)
+    .attr("height", 30)
+    .attr("rx", 5)
+    .attr("ry", 5);
+var tooltipText = tooltip.append("text");
+
+d3.tsv("data/freq.tsv", function(d) {
+    d.frequency = +d.frequency;
+    return d;
+}, function(error, data) {
+    x.domain(data.map(function(d) { return d.letter; }));
+    y.domain([0, d3.max(data, function(d) { return d.frequency; })]);
+    var bars = chart.selectAll(".bar")
+        .data(data)
+      .enter().insert("rect", ".barEnd")
+        .attr("class", "bar")
+        .attr("width", x.rangeBand())
+        .attr("height", function(d) { return height - y(d.frequency); })
+        .attr("x", function(d) { return x(d.letter); })
+        .attr("y", function(d) { return y(d.frequency); });
+
+    chart.select(".x.axis").call(xAxis);
+    chart.select(".y.axis").call(yAxis);
+
+    bars.on("mouseenter", function(d) {
+        var barX = d3.select(this).attr("x");
+        var barY = d3.select(this).attr("y");
+        var barW = d3.select(this).attr("width");
+        var barH = d3.select(this).attr("height");
+        var w = tooltipRect.attr("width");
+        var h = tooltipRect.attr("height");
+        var x = barX - (w - barW) / 2;
+        var y = barY - h - 5;
+        tooltip.attr("transform", "translate(" + x + "," + y + ")")
+            .style("display", "block");
+        tooltip.select("text")
+            .attr("x", tooltipRect.attr("width") / 2)
+            .attr("y", tooltipRect.attr("height") / 2)
+            .text(d.letter + ": " + d3.format(".2%")(d.frequency));
+    });
+    bars.on("mouseleave", function(d) { tooltip.style("display", "none"); })
+});
+        </script>
+
+    </body>
+</html>
